@@ -1,0 +1,173 @@
+---
+title: "Custering"
+author: "Nicole Ashby"
+date: "June 12, 2019"
+output: word_document
+---
+
+Libraries  
+```{r}
+options(tidyverse.quiet=TRUE)
+library(tidyverse)
+library(cluster) 
+library(factoextra) 
+library(dendextend) 
+```
+
+
+Before beginning the assignment tasks, you should read-in the data for the assignment into a data frame
+called "trucks". In this dataset, Driver_ID is a unique identifer for each delivery driver, Distance is the
+average mileage driven by each driver in a day, and Speeding is the percentage of the driver's time in which
+he is driving at least 5 miles per hour over the speed limit.
+
+
+
+```{r}
+library(readr)
+trucks <- read_csv("trucks.csv")
+str(trucks)
+summary(trucks)
+```
+
+####Task 1: Plot the relationship between Distance and Speeding. Describe this relationship. Does there appear to be any natural clustering of drivers?
+
+```{r}
+ggplot(trucks, aes(x=Distance, y=Speeding)) + geom_point() + theme_bw() +
+  labs(title = "Trucks (Distance, Speeding)"
+       )
+```
+
+##### From this scatterplot, we can see 4 different clusters. We will start with the first cluster, between 0 and 100 miles of distance, there seems to be greater amount of trucks speeding between 0 and 10% of the time. The second cluster on the left that is not as dense shows us that betewen about 10% and 70% of the time, drivers that drive less than 100 miles spee. On the right side, drivers that travel more than 125 miles are still more likely to only speed 0-25% of the time, while a scattered cluster shows us that there are some drivers in this category that speed 25-100% of the time. 
+
+
+####Task 2 Create a new data frame (called trucks2) that excludes the Driver_ID variable and includes scaled versions of the Distance and Speeding variables. NOTE: Wrap the scale(trucks2) command in an as.data.frame command to ensure that the resulting object is a data frame. By default, scale converts data frames to lists
+ 
+```{r}
+trucks2 = trucks %>% select("Distance","Speeding")
+str(trucks2)
+```
+
+  
+```{r}
+trucks2_scaled = as.data.frame(scale(trucks2))
+summary(trucks2_scaled)
+```
+
+
+####Task 3: Use k-Means clustering with two clusters (k=2) to cluster the trucks2 data frame. Use a random number seed of 1234. Visualize the clusters using the fviz_cluster function. Comment on the clusters
+
+
+```{r}
+set.seed(1234)
+clusters1 = kmeans(trucks2_scaled, 2)
+```
+
+```{R}
+fviz_cluster(clusters1, trucks2_scaled)
+```
+##### The cluster plot shows only 2 clusters.
+
+####Task 4: Use the two methods from the k-Means lecture to identify the optimal number of clusters. Use a random number seed of 123 for these methods. Is there consensus between these two methods as the optimal number of clusters?
+
+```{r}
+set.seed(123)
+fviz_nbclust(trucks2_scaled, kmeans, method = "wss") #minimize within-cluster variation
+```
+
+##### This method shows that the optimal number of clusters is 4.  
+
+  
+```{r}
+set.seed(123)
+fviz_nbclust(trucks2_scaled, kmeans, method = "silhouette") 
+```
+
+##### There is consensous, the optimal number of clusters is 4.
+
+####Task 5: Use the optimal number of clusters that you identified in Task 4 to create k-Means clusters. Use a random number seed of 1234. Use the fviz_cluster function to visualize the clusters.
+
+ 
+```{r}
+set.seed(1234)
+clusters2 <- kmeans(trucks2_scaled, 4)
+clusters2 
+fviz_cluster(clusters2, trucks2_scaled)
+```
+
+
+
+####Task 6: In words, how would you characterize the clusters you created in Task 5?
+
+##### The clusters in task 5 show 4 clusters, much like the clusters I described at the beginning of this assignment.   
+
+#### Before starting Task 7, read in the "wineprice.csv" file into a data frame called wine. This is a small dataset containing wine characteristics and the price of wine at auction. WinterRain refers to the amount of rain received in winter, AGST refers to the average growing season temperature, HarvestRain refers to the amount of rain received in the harvest season, Age refers to the age of the wine when sold at auction, and FrancePop refers to the population of France at the time the wine was sold at auction. Create a new data frame called wine2 that removes the Year and FrancePop variables and scales the other variables.  
+
+  
+```{r}
+library(readr)
+wine <- read_csv("wineprice.csv")
+str(wine)
+summary(wine)
+```
+
+```{r}
+wine2 = wine %>% select("Price", "WinterRain","AGST", "HarvestRain", "Age")
+str(wine2)
+
+wine2_scaled = as.data.frame(scale(wine2))
+summary(wine2_scaled)
+```
+
+####Task 7:Use the two methods from Task 4 to determine the optimal number of k-Means clusters for this data. Use a random number seed of 123. Is there consensus between these two methods as the optimal number of clusters?
+
+
+  
+```{r}
+set.seed(123)
+fviz_nbclust(wine2_scaled, kmeans, method = "wss") #minimize within-cluster variation
+```
+
+  
+```{r}
+set.seed(123)
+fviz_nbclust(wine2_scaled, kmeans, method = "silhouette") 
+```
+
+#####The first method shows the number of clusters should be around 5-7 and the second method says 5.
+
+####Task 8: Use the optimal number of clusters that you identified in Task 4 to create k-Means clusters. Use a random number seed of 1234. Use the fviz_cluster function to visualize the clusters.
+
+ 
+```{r}
+set.seed(1234)
+clusters2 <- kmeans(wine2_scaled, 5)
+clusters2 
+fviz_cluster(clusters2, wine2_scaled)
+```
+
+
+####Task 9: Use agglomerative clustering to develop a dendogram for the scaled wine data. Follow the same process from the lecture where we used a custom function to identify the distance metric that maximizes the "agglomerative coefficient". Plot the dendogram.
+  
+
+```{r}
+m = c( "average", "single", "complete", "ward")
+names(m) = c( "average", "single", "complete", "ward")
+
+ac = function(x) {
+  agnes(wine2_scaled, method = x)$ac
+}
+map_dbl(m, ac)
+```
+  
+```{r}
+hc = agnes(wine2_scaled, method = "ward") 
+pltree(hc, cex = 0.6, hang = -1, main = "Agglomerative Dendrogram") 
+```
+
+####Task 10: Repeat Task 9, but with divisive clustering.
+
+  
+```{r}
+hc2 = diana(wine2_scaled)
+pltree(hc2, cex = 0.6, hang = -1, main = "Divisive Dendogram")
+```
